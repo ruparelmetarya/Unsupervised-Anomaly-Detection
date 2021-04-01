@@ -1,4 +1,8 @@
 import pandas as pd
+from sklearn.model_selection import train_test_split
+from statsmodels.tsa.arima.model import ARIMA
+from random import random
+import matplotlib.pyplot as plt
 
 
 class AnomalyDetection:
@@ -9,30 +13,33 @@ class AnomalyDetection:
 
         :return:
         """
-        raw_data = pd.read_csv("/Users/Metarya/Downloads/trace_201708/container_usage.csv", header=None,
-                               names=['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'])
-        del raw_data["2"]
-        del raw_data["4"]
-        del raw_data["5"]
-        del raw_data["6"]
-        del raw_data["7"]
-        del raw_data["8"]
-        del raw_data["9"]
-        del raw_data["10"]
-        del raw_data["11"]
-        del raw_data["12"]
-        raw_data.columns = ["timestamp", "cpu_util"]
-        print(raw_data)
+        raw_data = pd.read_csv("ec2_cpu_util.csv")
+        return raw_data
 
     @staticmethod
-    def moving_average():
+    def moving_average(dataframe):
         """
+        Moving Average Algorithm for predicting data-points.
+        @:param dataframe: Pandas DF of the Data to be trained/tested.
+        """
+        train, test = train_test_split(dataframe, test_size=0.1, shuffle=False)
+        predictions = test
+        for index, value in test.iterrows():
+            model = ARIMA(train.value.tolist(), order=(0, 0, 1))
+            fit = model.fit()
+            pred = fit.forecast()
+            predictions['value'][index] = pred
+            i = predictions.index[predictions.value == pred[0]]
+            ts = predictions['timestamp'][i[0]]
+            train.loc[len(train.index)] = [ts, pred[0]]
 
-        :return:
-        """
+        dataframe.plot(x='timestamp', y='value', kind='scatter')
+        plt.scatter(test.timestamp, test.value, c='blue')
+        plt.scatter(predictions.timestamp, predictions.value, c='red')
+        plt.show()
 
     @staticmethod
-    def auto_regression():
+    def auto_regression(dataframe):
         """
 
         :return:
@@ -40,4 +47,7 @@ class AnomalyDetection:
 
 
 if __name__ == '__main__':
-    AnomalyDetection.read_data()
+    df = AnomalyDetection.read_data()
+    AnomalyDetection.moving_average(df)
+    # data = [x + random() for x in range(1, 100)]
+    # print(data)
