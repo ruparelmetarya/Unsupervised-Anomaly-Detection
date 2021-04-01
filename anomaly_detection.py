@@ -1,12 +1,26 @@
+import pandas as pd
+
+
 class AnomalyDetection:
 
-    def moving_average(self):
+    @staticmethod
+    def read_data():
+        """
+
+        :return:
+        """
+        raw_data = pd.read_csv('value.txt')
+        print(raw_data)
+
+    @staticmethod
+    def moving_average():
         """
 
         :return:
         """
 
-    def auto_regression(self):
+    @staticmethod
+    def auto_regression():
         """
 
         :return:
@@ -14,4 +28,4 @@ class AnomalyDetection:
 
 
 if __name__ == '__main__':
-    print("Hi")
+    AnomalyDetection.read_data()
