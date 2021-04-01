@@ -1,48 +1,61 @@
-from math import sqrt
+from random import random
 
 import pandas as pd
 import numpy as np
 from math import sqrt
-from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import train_test_split
-from statsmodels.tsa.arima.model import ARIMA
-from random import random
-import matplotlib.pyplot as plt
 import pylab
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import r2_score, mean_squared_error
-from statsmodels.tsa.ar_model import AutoReg, ar_select_order, AR
-from random import random
-from datetime import datetime
-# import the necessary packages
-from matplotlib import pyplot as plt
-from statsmodels.tsa.stattools import adfuller
+
+import matplotlib.pyplot as plt
+from statsmodels.graphics.tsaplots import plot_pacf
 from pandas.plotting import autocorrelation_plot
 
+from sklearn.model_selection import train_test_split
 
-def dateparse(time_in_secs):
-    return datetime.fromtimestamp(float(time_in_secs))
-
-
-from sklearn.metrics import r2_score
+from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.ar_model import AutoReg, ar_select_order, AR
+from statsmodels.tsa.stattools import adfuller
+
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import r2_score
+
+def getRecall(trueVals,preds):
+    recall = recall_score(trueVals, preds)
+    return recall
+
+def getAccuracy(labels,preds):
+    acc = accuracy_score(labels, preds)
+    return acc
+
+def getF1Score(trueVals,preds):
+    f1Score = f1_score(trueVals, preds)
+    return f1Score
+
+def evaluate(test,predictions):
+    rmse = sqrt(mean_squared_error(test, predictions))
+    print('Test RMSE: %.3f' % rmse)
+    mae = mean_absolute_error(test, predictions)
+    print('Mean Absolute Error: %.3f' % mae)
+
+    # evaluate forecasts
+    test_dis = [1]*len(test)
+    pred_dis = list()
+    epsilon = 10**(-2)
+    for i in range(len(test)):
+        if( abs(test[i]-predictions[i]) < epsilon):
+            pred_dis.append(1)
+        else:
+            pred_dis.append(0)
 
 
-# create a difference transform of the dataset
-def difference(dataset):
-    diff = list()
-    for i in range(1, len(dataset)):
-        value = dataset[i] - dataset[i - 1]
-        diff.append(value)
-    return np.array(diff)
-
-
-def getValue(diff, first):
-    res = list()
-    diff[0] = diff[0] + first
-    for i in range(1, len(diff) - 1):
-        diff[i] = diff[i] + diff[i - 1]
-    return np.array(diff)
+    print('Accuracy: ' + str(getAccuracy(test_dis,pred_dis)))
+    print('F1Score: ' + str(getF1Score(test_dis,pred_dis)))
+    print('Recall: ' + str(getRecall(test_dis,pred_dis)))
+    print(confusion_matrix(test_dis, pred_dis))
 
 
 # Make a prediction give regression coefficients and lag obs
@@ -70,11 +83,11 @@ class AnomalyDetection:
         # data.plot()
         # plt.show()
         # print(data.value)
-        result = adfuller(data)
-        print('ADF Statistic: %f' % result[0])
-        print('p-value: %f' % result[1])
-        data.plot()
-        plt.show()
+        # result = adfuller(data)
+        # print('ADF Statistic: %f' % result[0])
+        # print('p-value: %f' % result[1])
+        # data.plot()
+        # plt.show()
         return data
 
     @staticmethod
@@ -97,52 +110,51 @@ class AnomalyDetection:
             obs = test[t]
             history.append(obs)
             print('predicted=%f, expected=%f' % (yhat, obs))
-        # evaluate forecasts
-        rmse = sqrt(mean_squared_error(test, predictions))
-        print('Test RMSE: %.3f' % rmse)
+
+        evaluate(test,predictions)
         # plot forecasts against actual outcomes
         plt.plot(test.index, test.values)
         plt.plot(test.index, predictions, color='red')
-        plt.show()
-
-    # @staticmethod
-    # def ar2(series):
-    #     X = difference(series.values)
-    #     size = int(len(X) * 0.66)
-    #     train, test = X[0:size], X[size:]
-    #     t2 = series.values[size:]
-    #     # train autoregression
-    #     window = 6
-    #     model = AutoReg(train, lags=6)
-    #     model_fit = model.fit()
-    #     coef = model_fit.params
-    #     # walk forward over time steps in test
-    #     history = [train[i] for i in range(len(train))]
-    #     predictions = list()
-    #     for t in range(len(test)):
-    #         yhat = predict(coef, history)
-    #         obs = test[t]
-    #         predictions.append(yhat)
-    #         history.append(obs)
-    #     rmse = sqrt(mean_squared_error(test, predictions))
-    #     print('Test RMSE: %.3f' % rmse)
-    #     # plot
-    #     # plt.plot(test)
-    #     # test2 = getValue(test)
-    #     plt.plot(t2)
-    #     print(series.values[size-3:size+3])
-    #     plt.plot(predictions, color='red')
-    #     plt.show()
+        plt.savefig("MA Prediction")
 
     @staticmethod
-    def auto_regression(dataframe):
+    def auto_regression(df):
         """
 
         :return:
         """
+        dataframe = df.sort_index()
+        # plot_pacf(dataframe, lags=100)
+        # plt.savefig("Lag Graph")
+
+        train, test = train_test_split(dataframe, test_size=0.1, shuffle=False)
+        predictions = list()
+        model = AutoReg(train, lags=[1,2,61])
+        model_fit = model.fit()
+        # print(test)
+        # print(type(test))
+        # print(test.index[0])
+        # print(model_fit.summary())
+
+        # # walk-forward validation
+        for t in range(len(test)):
+            p = model_fit.predict(start=test.index[t],
+                                  end=test.index[t],
+                                  dynamic=False)
+            # print(p)
+            # print(p[0])
+            predictions.append(p[0])
+            # print('predicted=%f, expected=%f' % (p[0], test[t]))
+
+        # plot forecasts against actual outcomes
+        plt.plot(test.index, test.values)
+        plt.plot(test.index, predictions, color='red')
+        plt.show()
+        # plt.savefig("AR Prediction")
+        evaluate(test,predictions)
 
 
 if __name__ == '__main__':
     df = AnomalyDetection.read_data()
     # AnomalyDetection.moving_average(df)
-    # AnomalyDetection.auto_regression(df)
+    AnomalyDetection.auto_regression(df)
