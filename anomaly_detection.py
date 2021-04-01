@@ -21,6 +21,7 @@ class AnomalyDetection:
         del raw_data["10"]
         del raw_data["11"]
         del raw_data["12"]
+        raw_data.columns = ["timestamp", "cpu_util"]
         print(raw_data)
 
     @staticmethod
