@@ -14,6 +14,8 @@ from sklearn.model_selection import train_test_split
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.ar_model import AutoReg, ar_select_order, AR
 from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score
@@ -153,8 +155,36 @@ class AnomalyDetection:
         # plt.savefig("AR Prediction")
         evaluate(test,predictions)
 
+    @staticmethod
+    def Sarimax(df):
+        """
+
+        :return:
+        """
+        dataframe = df.sort_index()
+        train, test = train_test_split(dataframe, test_size=0.1, shuffle=False)
+        predictions = list()
+        model = SARIMAX(dataframe, trend='c', order=(5,1,0))
+        model_fit = model.fit()
+        # # walk-forward validation
+        for t in range(len(test)):
+            p = model_fit.predict(start=test.index[t],
+                                  end=test.index[t],
+                                  dynamic=False)
+            # print(p)
+            # print(p[0])
+            predictions.append(p[0])
+            # print('predicted=%f, expected=%f' % (p[0], test[t]))
+
+        # # plot forecasts against actual outcomes
+        plt.plot(test.index, test.values)
+        plt.plot(test.index, predictions, color='red')
+        plt.show()
+        # # plt.savefig("AR Prediction")
+        evaluate(test,predictions)
+
 
 if __name__ == '__main__':
     df = AnomalyDetection.read_data()
-    # AnomalyDetection.moving_average(df)
-    AnomalyDetection.auto_regression(df)
+    AnomalyDetection.Sarimax(df)
+    # AnomalyDetection.auto_regression(df)
