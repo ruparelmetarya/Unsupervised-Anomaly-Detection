@@ -8,7 +8,6 @@ import pylab
 import matplotlib.pyplot as plt
 from statsmodels.graphics.tsaplots import plot_pacf
 from pandas.plotting import autocorrelation_plot
-import statsmodels.api as sm
 
 from sklearn.model_selection import train_test_split
 
@@ -114,9 +113,18 @@ class AnomalyDetection:
 
         :return:
         """
-        data = pd.read_csv('ec2_cpu_utilization_24ae8d.csv',
+        data = pd.read_csv('anomalyDetectionData.csv',
                            parse_dates=['timestamp'],
                            index_col=['timestamp'],
+                           usecols = ['timestamp',
+                                      'System CPU : (MXBean(java.lang:type=OperatingSystem).SystemCpuLoad)'
+                                      # 'Process CPU : (MXBean(java.lang:type=OperatingSystem).ProcessCpuLoad)',
+                                      # 'Thread CPU time : (MXBean(java.lang:type=Threading).CurrentThreadCpuTime)',
+                                      # 'System CPU : (MXBean(java.lang:type=OperatingSystem).SystemCpuLoad)',
+                                      # 'Process CPU : (\\Process(java)\\CPU)',
+                                      # 'MXBean(com.bea:Name=source01,ServerRuntime=i0_lphost06,Type=JDBCDataSourceRuntime).ConnectionDelayTime',
+                                      # 'MXBean(com.bea:Name=source01,ServerRuntime=i0_lphost06,Type=JDBCConnectionPoolRuntime).ConnectionDelayTime'
+                                      ],
                            squeeze=True)
         # plt.rcParams['figure.figsize']=(20,10)
         # plt.style.use('ggplot')
@@ -166,9 +174,9 @@ class AnomalyDetection:
         train, test = train_test_split(dataframe, test_size=0.1, shuffle=False)
         history = [x for x in train]
         predictions = list()
-        p = 3  # lag
-        d = 0  # difference order
-        q = 1  # size of moving average window
+        p = 5  # lag
+        d = 1  # difference order
+        q = 0  # size of moving average window
         # walk-forward validation
         for t in range(len(test)):
             arima_model = ARIMA(history, order=(p, d, q))
@@ -232,7 +240,7 @@ class AnomalyDetection:
         dataframe = df.sort_index()
         train, test = train_test_split(dataframe, test_size=0.1, shuffle=False)
         predictions = list()
-        model = SARIMAX(dataframe, trend='c', order=(5, 1, 0))
+        model = SARIMAX(dataframe, trend='c', order=(5,1,0))
         model_fit = model.fit()
         # # walk-forward validation
         for t in range(len(test)):
@@ -249,24 +257,16 @@ class AnomalyDetection:
         plt.plot(test.index, predictions, color='red')
         plt.show()
         # # plt.savefig("AR Prediction")
-        evaluate(test, predictions)
+        evaluate(test,predictions)
 
 
 if __name__ == '__main__':
     df = AnomalyDetection.read_data()
-    AnomalyDetection.Sarimax(df)
+    # AnomalyDetection.Sarimax(df)
     # AnomalyDetection.auto_regression(df)
-    AnomalyDetection.arima(df)
-    # df.columns = ['value']
     # AnomalyDetection.moving_average(df)
     # AnomalyDetection.arima(df)
-    dickey_fuller_obs(df)
-    first_diff = df - df.shift(1)
-    first_diff = first_diff.dropna(inplace=False)
-    dickey_fuller_obs(first_diff)
-    fig = plt.figure(figsize=(12, 8))
-    ax1 = fig.add_subplot(211)
-    fig = sm.graphics.tsa.plot_acf(df, lags=40, ax=ax1)
-    ax2 = fig.add_subplot(212)
-    fig = sm.graphics.tsa.plot_pacf(df, lags=40, ax=ax2)
-    plt.show()
+    # dickey_fuller_obs(df)
+    # first_diff = df - df.shift(1)
+    # first_diff = first_diff.dropna(inplace=False)
+    # dickey_fuller_obs(first_diff)
