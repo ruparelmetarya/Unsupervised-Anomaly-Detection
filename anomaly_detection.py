@@ -8,6 +8,7 @@ import pylab
 import matplotlib.pyplot as plt
 from statsmodels.graphics.tsaplots import plot_pacf
 from pandas.plotting import autocorrelation_plot
+import statsmodels.api as sm
 
 from sklearn.model_selection import train_test_split
 
@@ -163,9 +164,9 @@ class AnomalyDetection:
         train, test = train_test_split(dataframe, test_size=0.1, shuffle=False)
         history = [x for x in train]
         predictions = list()
-        p = 5  # lag
-        d = 1  # difference order
-        q = 0  # size of moving average window
+        p = 3  # lag
+        d = 0  # difference order
+        q = 1  # size of moving average window
         # walk-forward validation
         for t in range(len(test)):
             arima_model = ARIMA(history, order=(p, d, q))
@@ -225,9 +226,15 @@ if __name__ == '__main__':
     df = AnomalyDetection.read_data()
     # AnomalyDetection.moving_average(df)
     # AnomalyDetection.auto_regression(df)
-    # AnomalyDetection.arima(df)
+    AnomalyDetection.arima(df)
     # df.columns = ['value']
     dickey_fuller_obs(df)
     first_diff = df - df.shift(1)
     first_diff = first_diff.dropna(inplace=False)
     dickey_fuller_obs(first_diff)
+    fig = plt.figure(figsize=(12, 8))
+    ax1 = fig.add_subplot(211)
+    fig = sm.graphics.tsa.plot_acf(df, lags=40, ax=ax1)
+    ax2 = fig.add_subplot(212)
+    fig = sm.graphics.tsa.plot_pacf(df, lags=40, ax=ax2)
+    plt.show()
