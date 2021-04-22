@@ -107,14 +107,19 @@ def dickey_fuller_obs(timeseries, window=12, cutoff=0.01):
 
 
 class AnomalyDetection:
+    def __init__(self,fileName):
+        self.p = 3  # lag
+        self.d = 0  # difference order
+        self.q = 1  # size of moving average window
+        self.fileName = fileName
+        self.dataframe = self.read_data()
 
-    @staticmethod
-    def read_data():
+    def read_data(self):
         """
 
         :return:
         """
-        data = pd.read_csv('ec2_cpu_utilization_24ae8d.csv',
+        data = pd.read_csv(self.fileName,
                            parse_dates=['timestamp'],
                            index_col=['timestamp'],
                            squeeze=True)
@@ -130,13 +135,12 @@ class AnomalyDetection:
         # plt.show()
         return data
 
-    @staticmethod
-    def moving_average(dataframe):
+    def moving_average(self):
         """
         Moving Average Algorithm for predicting data-points.
         :param dataframe: Pandas DF of the Data to be trained/tested.
         """
-        train, test = train_test_split(dataframe, test_size=0.1, shuffle=False)
+        train, test = train_test_split(self.dataframe, test_size=0.1, shuffle=False)
         history = [x for x in train]
         predictions = list()
         # walk-forward validation
@@ -157,21 +161,17 @@ class AnomalyDetection:
         plt.plot(test.index, predictions, color='red')
         plt.savefig("MA Prediction")
 
-    @staticmethod
-    def arima(dataframe):
+    def arima(self):
         """
         ARIMA Algorithm for predicting data-points.
         :param dataframe: Pandas DF of the Data to be trained/tested.
         """
-        train, test = train_test_split(dataframe, test_size=0.1, shuffle=False)
+        train, test = train_test_split(self.dataframe, test_size=0.1, shuffle=False)
         history = [x for x in train]
         predictions = list()
-        p = 3  # lag
-        d = 0  # difference order
-        q = 1  # size of moving average window
         # walk-forward validation
         for t in range(len(test)):
-            arima_model = ARIMA(history, order=(p, d, q))
+            arima_model = ARIMA(history, order=(self.p, self.d, self.q))
             model_fit = arima_model.fit()
             print(model_fit.summary)
             output = model_fit.forecast()
@@ -187,13 +187,12 @@ class AnomalyDetection:
         plt.plot(test.index, predictions, color='red')
         plt.savefig("ARIMA Prediction")
 
-    @staticmethod
-    def auto_regression(df):
+    def auto_regression(self):
         """
 
         :return:
         """
-        dataframe = df.sort_index()
+        dataframe = self.dataframe.sort_index()
         # plot_pacf(dataframe, lags=100)
         # plt.savefig("Lag Graph")
 
@@ -223,16 +222,15 @@ class AnomalyDetection:
         # plt.savefig("AR Prediction")
         evaluate(test, predictions)
 
-    @staticmethod
-    def Sarimax(df):
+    def Sarimax(self):
         """
 
         :return:
         """
-        dataframe = df.sort_index()
+        dataframe = self.dataframe.sort_index()
         train, test = train_test_split(dataframe, test_size=0.1, shuffle=False)
         predictions = list()
-        model = SARIMAX(dataframe, trend='c', order=(5, 1, 0))
+        model = SARIMAX(dataframe, trend='c', order=(self.p,self.d,self.q))
         model_fit = model.fit()
         # # walk-forward validation
         for t in range(len(test)):
@@ -253,13 +251,15 @@ class AnomalyDetection:
 
 
 if __name__ == '__main__':
-    df = AnomalyDetection.read_data()
-    AnomalyDetection.Sarimax(df)
-    # AnomalyDetection.auto_regression(df)
-    AnomalyDetection.arima(df)
+    fileName = 'ec2_cpu_utilization_24ae8d.csv'
+    anomalyDet = AnomalyDetection(fileName)
+    anomalyDet.Sarimax()
+    # anomalyDet.auto_regression(df)
+    anomalyDet.arima()
     # df.columns = ['value']
     # AnomalyDetection.moving_average(df)
     # AnomalyDetection.arima(df)
+    df = anomalyDet.dataframe
     dickey_fuller_obs(df)
     first_diff = df - df.shift(1)
     first_diff = first_diff.dropna(inplace=False)
