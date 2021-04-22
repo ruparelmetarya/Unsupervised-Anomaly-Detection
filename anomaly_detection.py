@@ -222,6 +222,34 @@ class AnomalyDetection:
         # plt.savefig("AR Prediction")
         evaluate(test, predictions)
 
+    def Sarima(self):
+        """
+
+        :return:
+        """
+        dataframe = self.dataframe.sort_index()
+        train, test = train_test_split(dataframe, test_size=0.1, shuffle=False)
+        predictions = list()
+        history = train
+        # # walk-forward validation
+        i=len(history)
+        for t in range(len(test)):
+            model = SARIMAX(history, trend='n', order=(5,1,0))
+            model_fit = model.fit()
+            p = model_fit.predict(start=test.index[t],
+                                  end=test.index[t],
+                                  dynamic=True)
+            history.append(test.iloc[[t]])
+            predictions.append(p[0])
+            print('predicted=%f, expected=%f' % (p[0],test[t] ))
+
+        plt.plot(test.index, test.values)
+        plt.plot(test.index, predictions, color='red')
+        plt.show()
+        plt.plot(test.index, predictions, color='red')
+        plt.show()
+        evaluate(test, predictions)
+
     def Sarimax(self):
         """
 
@@ -230,30 +258,29 @@ class AnomalyDetection:
         dataframe = self.dataframe.sort_index()
         train, test = train_test_split(dataframe, test_size=0.1, shuffle=False)
         predictions = list()
-        model = SARIMAX(dataframe, trend='c', order=(self.p,self.d,self.q))
-        model_fit = model.fit()
+        history = train
         # # walk-forward validation
+        i=len(history)
         for t in range(len(test)):
+            model= SARIMAX(endog=Y[:'2020-04-13'], exog = train[:'2020-04-13'], order = (self.p,self.d,self.q))
+            model_fit = model.fit()
             p = model_fit.predict(start=test.index[t],
                                   end=test.index[t],
                                   dynamic=False)
-            # print(p)
-            # print(p[0])
+            history.append(test.iloc[[t]])
             predictions.append(p[0])
-            # print('predicted=%f, expected=%f' % (p[0], test[t]))
 
-        # # plot forecasts against actual outcomes
         plt.plot(test.index, test.values)
         plt.plot(test.index, predictions, color='red')
         plt.show()
-        # # plt.savefig("AR Prediction")
         evaluate(test, predictions)
+
 
 
 if __name__ == '__main__':
     fileName = 'ec2_cpu_utilization_24ae8d.csv'
     anomalyDet = AnomalyDetection(fileName)
-    anomalyDet.Sarimax()
+    anomalyDet.Sarima()
     # anomalyDet.auto_regression(df)
     anomalyDet.arima()
     # df.columns = ['value']
